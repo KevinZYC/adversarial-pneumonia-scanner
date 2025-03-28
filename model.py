@@ -1,6 +1,6 @@
 import tensorflow as tf
 import keras
-from keras import layers, models
+from keras import layers, models, regularizers
 from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
 import os
 import kagglehub
@@ -49,17 +49,16 @@ test_generator = val_test_datagen.flow_from_directory(
 # CNN Model
 def build_model():
     model = models.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3)),
+        layers.Conv2D(6, (5, 5), activation='relu', input_shape=(150, 150, 3), kernel_regularizer=regularizers.l2(0.01)),
         layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(128, (3, 3), activation='relu'),
-        layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(128, (3, 3), activation='relu'),
+        layers.Conv2D(16, (5, 5), activation='relu', kernel_regularizer=regularizers.l2(0.01)),
         layers.MaxPooling2D((2, 2)),
         layers.Flatten(),
-        layers.Dropout(0.5),
-        layers.Dense(512, activation='relu'),
+        layers.Dropout(0.2),
+        layers.Dense(128, activation='relu'),
+        layers.Dropout(0.2),
+        layers.Dense(84, activation='relu'),
+        layers.Dropout(0.2),
         layers.Dense(1, activation='sigmoid')
     ])
     
