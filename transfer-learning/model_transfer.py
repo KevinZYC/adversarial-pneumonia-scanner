@@ -11,6 +11,11 @@ from sklearn.utils.class_weight import compute_class_weight
 from sklearn.utils import resample
 from sklearn.model_selection import train_test_split
 from keras._tf_keras.keras.applications import ResNet50
+import keras._tf_keras.keras.backend as K
+
+# Clear previous data
+K.clear_session()
+keras.backend.clear_session()
 
 # Define dataset paths
 data_dir = kagglehub.dataset_download("paultimothymooney/chest-xray-pneumonia")
@@ -18,10 +23,11 @@ print(f"Dataset downloaded to: {data_dir}")
 paths = glob.glob(data_dir+'/*/*/*/*.jpeg')
 print(f'found {len(paths)} images in the dataset')
 data = pd.DataFrame(paths,columns=['path'])
+data = data.sample(frac=1, random_state=42).reset_index(drop=True)
 data['label'] = data['path'].apply(lambda x:x.split('/')[12].strip())
-print(data.head())
+print(data.head(50))
 
-df_majority = data[data.label == 'PNEUMONIA']
+"""df_majority = data[data.label == 'PNEUMONIA']
 df_minority = data[data.label == 'NORMAL']
 
 majority_count = len(df_majority)
@@ -35,9 +41,9 @@ df_majority_downsampled = resample(df_majority,
                                    n_samples=new_majority_count, 
                                    random_state=42)  
 downsampled_data = pd.concat([df_minority, df_majority_downsampled])
-print(downsampled_data['label'].value_counts())
+print(downsampled_data['label'].value_counts())"""
 
-train, temp = train_test_split(downsampled_data, test_size=0.2, random_state=37)
+train, temp = train_test_split(data, test_size=0.2, random_state=37)
 test, valid = train_test_split(temp, test_size=0.5, random_state=49)
 
 print(train['path'].isin(valid['path']).sum())  # Should be 0 if no overlap
@@ -96,6 +102,9 @@ test_generator = val_test_datagen.flow_from_dataframe(
     class_mode='binary',
     shuffle=False  
 )
+
+print(train_generator.class_indices)  # Check the mapping in flow_from_dataframe
+print(val_generator.class_indices)    # Check if labels are consistent in validation
 
 # CNN Model
 def build_model():
