@@ -35,7 +35,7 @@ df_test_p = pd.DataFrame({'path': test_p, 'label': 'PNEUMONIA'}).head(230)
 df_test = pd.concat([df_test_n, df_test_p], ignore_index=True)
 df_test = df_test.sample(frac=1, random_state=42).reset_index(drop=True)
 
-test, valid = train_test_split(df_test, test_size=0.33, random_state=49)
+test, valid = train_test_split(df_test, test_size=0.66, random_state=49)
 print("valid set:", valid['label'].value_counts())
 
 # Image data augmentation
@@ -129,6 +129,8 @@ history = model.fit(
 # Evaluate on test data
 test_loss, test_acc = model.evaluate(test_generator)
 print(f'Test Accuracy: {test_acc:.4f}')
+
+model.save("lenet-balanced.h5")
 
 
 '''
