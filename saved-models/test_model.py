@@ -67,7 +67,7 @@ test_generator = val_test_datagen.flow_from_dataframe(
     y_col='label',  
     target_size=(150, 150),  
     color_mode='rgb',
-    batch_size=64,  
+    batch_size=8,  
     class_mode='binary',
     shuffle=False  
 )
@@ -78,12 +78,12 @@ adv_test_generator = adv_med_datagen.flow_from_dataframe(
     y_col='label',  
     target_size=(150, 150),  
     color_mode='rgb',
-    batch_size=64,  
+    batch_size=8,  
     class_mode='binary',
     shuffle=False  
 )
 
-model = load_model("./saved-models/xception-balanced.h5")
+model = load_model("./saved-models/model-balanced.h5")
 test_loss, test_acc = model.evaluate(test_generator)
 print(f'Unaltered Test Accuracy: {test_acc:.4f}')
 

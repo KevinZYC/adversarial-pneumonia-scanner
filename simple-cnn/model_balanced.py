@@ -9,6 +9,11 @@ import glob
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
+"""from keras._tf_keras.keras import mixed_precision
+policy = mixed_precision.Policy('mixed_float16')
+mixed_precision.set_global_policy(policy)"""
+
+
 # Clear previous data
 K.clear_session()
 keras.backend.clear_session()
@@ -55,7 +60,7 @@ val_test_datagen = ImageDataGenerator(rescale=1./255)
 train_generator = train_datagen.flow_from_directory(
     train_dir,
     target_size=(150, 150),
-    batch_size=32,
+    batch_size=8,
     class_mode='binary'
 )
 
@@ -72,7 +77,7 @@ val_generator = val_test_datagen.flow_from_dataframe(
     y_col='label',  
     target_size=(150, 150),  
     color_mode='rgb',
-    batch_size=64,  
+    batch_size=8,  
     class_mode='binary',
     shuffle=False  
 )
@@ -83,7 +88,7 @@ test_generator = val_test_datagen.flow_from_dataframe(
     y_col='label',  
     target_size=(150, 150),  
     color_mode='rgb',
-    batch_size=64,  
+    batch_size=8,  
     class_mode='binary',
     shuffle=False  
 )
@@ -91,19 +96,19 @@ test_generator = val_test_datagen.flow_from_dataframe(
 # CNN Model
 def build_model():
     model = models.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3), kernel_regularizer=regularizers.l2(0.01)),
+        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3), kernel_regularizer=regularizers.l2(0.001)),
         layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+        layers.Conv2D(64, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         layers.MaxPooling2D((2, 2)),
-        layers.Conv2D(128, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+        layers.Conv2D(128, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         layers.MaxPooling2D((2, 2)),
         layers.Flatten(),
         layers.Dropout(0.2),
-        layers.Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+        layers.Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         layers.Dropout(0.2),
-        layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+        layers.Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         layers.Dropout(0.2),
-        layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.01)),
+        layers.Dense(64, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         layers.Dropout(0.2),
         layers.Dense(1, activation='sigmoid')
     ])
@@ -133,6 +138,8 @@ history = model.fit(
 # Evaluate on test data
 test_loss, test_acc = model.evaluate(test_generator)
 print(f'Test Accuracy: {test_acc:.4f}')
+
+model.save("model-balanced.h5")
 
 '''
 training data:
@@ -186,57 +193,46 @@ Epoch 23: ReduceLROnPlateau reducing learning rate to 4.999999873689376e-05.
 163/163 ━━━━━━━━━━━━━━━━━━━━ 163s 851ms/step - accuracy: 0.8983 - loss: 0.4838 - val_accuracy: 0.8026 - val_loss: 0.9135 - learning_rate: 1.0000e-04
 5/5 ━━━━━━━━━━━━━━━━━━━━ 5s 919ms/step - accuracy: 0.8899 - loss: 0.5368
 
-
-Epoch 1/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 126s 758ms/step - accuracy: 0.4658 - loss: 7.2140 - val_accuracy: 0.5395 - val_loss: 3.6941 - learning_rate: 1.0000e-04
+with 8 batch on Colab:
+652/652 ━━━━━━━━━━━━━━━━━━━━ 0s 142ms/step - accuracy: 0.5409 - loss: 1.24622025-04-14 18:18:17.383734: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[8,32,148,148]{3,2,1,0}, u8[0]{0}) custom-call(f32[8,3,150,150]{3,2,1,0}, f32[32,3,3,3]{3,2,1,0}, f32[32]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+2025-04-14 18:18:17.493478: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[8,64,72,72]{3,2,1,0}, u8[0]{0}) custom-call(f32[8,32,74,74]{3,2,1,0}, f32[64,32,3,3]{3,2,1,0}, f32[64]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+2025-04-14 18:18:17.554126: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[8,128,34,34]{3,2,1,0}, u8[0]{0}) custom-call(f32[8,64,36,36]{3,2,1,0}, f32[128,64,3,3]{3,2,1,0}, f32[128]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+652/652 ━━━━━━━━━━━━━━━━━━━━ 104s 147ms/step - accuracy: 0.5410 - loss: 1.2459 - val_accuracy: 0.7368 - val_loss: 0.8218 - learning_rate: 1.0000e-04
 Epoch 2/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 136s 831ms/step - accuracy: 0.5836 - loss: 3.3460 - val_accuracy: 0.5724 - val_loss: 2.6715 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 111ms/step - accuracy: 0.8093 - loss: 0.6929 - val_accuracy: 0.7829 - val_loss: 0.7204 - learning_rate: 1.0000e-04
 Epoch 3/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 141s 861ms/step - accuracy: 0.7282 - loss: 2.3835 - val_accuracy: 0.8224 - val_loss: 1.9420 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 73s 111ms/step - accuracy: 0.8408 - loss: 0.5805 - val_accuracy: 0.8158 - val_loss: 0.6114 - learning_rate: 1.0000e-04
 Epoch 4/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 135s 828ms/step - accuracy: 0.7953 - loss: 1.8496 - val_accuracy: 0.6250 - val_loss: 1.9692 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8521 - loss: 0.5296 - val_accuracy: 0.8026 - val_loss: 0.6504 - learning_rate: 1.0000e-04
 Epoch 5/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 136s 835ms/step - accuracy: 0.7992 - loss: 1.5375 - val_accuracy: 0.8224 - val_loss: 1.3640 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8779 - loss: 0.4824 - val_accuracy: 0.8618 - val_loss: 0.5902 - learning_rate: 1.0000e-04
 Epoch 6/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 131s 800ms/step - accuracy: 0.8412 - loss: 1.2802 - val_accuracy: 0.8224 - val_loss: 1.1974 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8758 - loss: 0.4650 - val_accuracy: 0.8355 - val_loss: 0.5494 - learning_rate: 1.0000e-04
 Epoch 7/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 134s 822ms/step - accuracy: 0.8422 - loss: 1.1195 - val_accuracy: 0.7368 - val_loss: 1.2433 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 111ms/step - accuracy: 0.8817 - loss: 0.4412 - val_accuracy: 0.8355 - val_loss: 0.6067 - learning_rate: 1.0000e-04
 Epoch 8/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 137s 842ms/step - accuracy: 0.8351 - loss: 1.0312 - val_accuracy: 0.8289 - val_loss: 1.0001 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 111ms/step - accuracy: 0.8890 - loss: 0.4294 - val_accuracy: 0.8882 - val_loss: 0.5422 - learning_rate: 1.0000e-04
 Epoch 9/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 132s 808ms/step - accuracy: 0.8518 - loss: 0.9305 - val_accuracy: 0.8092 - val_loss: 0.9875 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8830 - loss: 0.4318 - val_accuracy: 0.8684 - val_loss: 0.4910 - learning_rate: 1.0000e-04
 Epoch 10/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 139s 850ms/step - accuracy: 0.8528 - loss: 0.8615 - val_accuracy: 0.8289 - val_loss: 0.9016 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 71s 109ms/step - accuracy: 0.8904 - loss: 0.4108 - val_accuracy: 0.8750 - val_loss: 0.5086 - learning_rate: 1.0000e-04
 Epoch 11/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 135s 827ms/step - accuracy: 0.8526 - loss: 0.8197 - val_accuracy: 0.8158 - val_loss: 0.8576 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8945 - loss: 0.3889 - val_accuracy: 0.8684 - val_loss: 0.4695 - learning_rate: 1.0000e-04
 Epoch 12/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 131s 801ms/step - accuracy: 0.8722 - loss: 0.7550 - val_accuracy: 0.8355 - val_loss: 0.8381 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 73s 112ms/step - accuracy: 0.8910 - loss: 0.3964 - val_accuracy: 0.7829 - val_loss: 0.6683 - learning_rate: 1.0000e-04
 Epoch 13/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 137s 839ms/step - accuracy: 0.8304 - loss: 0.7869 - val_accuracy: 0.8355 - val_loss: 0.7930 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 71s 110ms/step - accuracy: 0.8920 - loss: 0.3992 - val_accuracy: 0.8684 - val_loss: 0.4700 - learning_rate: 1.0000e-04
 Epoch 14/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 135s 829ms/step - accuracy: 0.8523 - loss: 0.7353 - val_accuracy: 0.8421 - val_loss: 0.7871 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.8993 - loss: 0.3492 - val_accuracy: 0.8224 - val_loss: 0.4925 - learning_rate: 1.0000e-04
 Epoch 15/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 137s 838ms/step - accuracy: 0.8625 - loss: 0.6866 - val_accuracy: 0.8289 - val_loss: 0.7614 - learning_rate: 1.0000e-04
+652/652 ━━━━━━━━━━━━━━━━━━━━ 72s 110ms/step - accuracy: 0.9037 - loss: 0.3595 - val_accuracy: 0.8421 - val_loss: 0.5718 - learning_rate: 1.0000e-04
 Epoch 16/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 136s 831ms/step - accuracy: 0.8618 - loss: 0.6895 - val_accuracy: 0.8289 - val_loss: 0.7735 - learning_rate: 1.0000e-04
-Epoch 17/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 142s 867ms/step - accuracy: 0.8781 - loss: 0.6462 - val_accuracy: 0.8355 - val_loss: 0.7203 - learning_rate: 1.0000e-04
-Epoch 18/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 135s 828ms/step - accuracy: 0.8532 - loss: 0.6637 - val_accuracy: 0.8421 - val_loss: 0.7234 - learning_rate: 1.0000e-04
-Epoch 19/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 137s 840ms/step - accuracy: 0.8598 - loss: 0.6543 - val_accuracy: 0.8289 - val_loss: 0.7075 - learning_rate: 1.0000e-04
-Epoch 20/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 142s 871ms/step - accuracy: 0.8589 - loss: 0.6265 - val_accuracy: 0.8421 - val_loss: 0.7114 - learning_rate: 1.0000e-04
-Epoch 21/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 239s 1s/step - accuracy: 0.8563 - loss: 0.6296 - val_accuracy: 0.8355 - val_loss: 0.6842 - learning_rate: 1.0000e-04
-Epoch 22/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 168s 1s/step - accuracy: 0.8549 - loss: 0.6199 - val_accuracy: 0.8289 - val_loss: 0.6911 - learning_rate: 1.0000e-04
-Epoch 23/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 127s 776ms/step - accuracy: 0.8696 - loss: 0.6038 - val_accuracy: 0.8487 - val_loss: 0.6647 - learning_rate: 1.0000e-04
-Epoch 24/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 129s 790ms/step - accuracy: 0.8567 - loss: 0.5905 - val_accuracy: 0.8289 - val_loss: 0.6687 - learning_rate: 1.0000e-04
-Epoch 25/25
-163/163 ━━━━━━━━━━━━━━━━━━━━ 125s 767ms/step - accuracy: 0.8613 - loss: 0.5928 - val_accuracy: 0.8421 - val_loss: 0.6541 - learning_rate: 1.0000e-04
-5/5 ━━━━━━━━━━━━━━━━━━━━ 4s 844ms/step - accuracy: 0.8704 - loss: 0.5832
-Test Accuracy: 0.8539
+652/652 ━━━━━━━━━━━━━━━━━━━━ 0s 107ms/step - accuracy: 0.8949 - loss: 0.3790
+Epoch 16: ReduceLROnPlateau reducing learning rate to 4.999999873689376e-05.
+652/652 ━━━━━━━━━━━━━━━━━━━━ 71s 109ms/step - accuracy: 0.8949 - loss: 0.3789 - val_accuracy: 0.7237 - val_loss: 0.8151 - learning_rate: 1.0000e-04
+38/39 ━━━━━━━━━━━━━━━━━━━━ 0s 96ms/step - accuracy: 0.8994 - loss: 0.42032025-04-14 18:36:23.392868: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[4,32,148,148]{3,2,1,0}, u8[0]{0}) custom-call(f32[4,3,150,150]{3,2,1,0}, f32[32,3,3,3]{3,2,1,0}, f32[32]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+2025-04-14 18:36:23.483550: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[4,64,72,72]{3,2,1,0}, u8[0]{0}) custom-call(f32[4,32,74,74]{3,2,1,0}, f32[64,32,3,3]{3,2,1,0}, f32[64]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+2025-04-14 18:36:23.570811: I external/local_xla/xla/service/gpu/autotuning/conv_algorithm_picker.cc:557] Omitted potentially buggy algorithm eng14{k25=0} for conv (f32[4,128,34,34]{3,2,1,0}, u8[0]{0}) custom-call(f32[4,64,36,36]{3,2,1,0}, f32[128,64,3,3]{3,2,1,0}, f32[128]{0}), window={size=3x3}, dim_labels=bf01_oi01->bf01, custom_call_target="__cudnn$convBiasActivationForward", backend_config={"cudnn_conv_backend_config":{"activation_mode":"kRelu","conv_result_scale":1,"leakyrelu_alpha":0,"side_input_scale":0},"force_earliest_schedule":false,"operation_queue_id":"0","wait_on_operation_queues":[]}
+39/39 ━━━━━━━━━━━━━━━━━━━━ 5s 122ms/step - accuracy: 0.8999 - loss: 0.4189
+Test Accuracy: 0.9091
 '''
