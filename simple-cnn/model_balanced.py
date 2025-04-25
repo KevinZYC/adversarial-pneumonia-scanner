@@ -93,9 +93,19 @@ test_generator = val_test_datagen.flow_from_dataframe(
     shuffle=False  
 )
 
+class AvgSmoothing(tf.keras.layers.Layer):
+    def __init__(self, pool_size, **kwargs):
+        super().__init__(**kwargs)
+        self.pool_size = pool_size
+
+    def call(self, inputs):
+        smoothed = tf.nn.avg_pool2d(inputs, ksize=self.pool_size, strides=1, padding='SAME')
+        return smoothed
+
 # CNN Model
 def build_model():
     model = models.Sequential([
+        AvgSmoothing(pool_size=3),
         layers.Conv2D(32, (3, 3), activation='relu', input_shape=(150, 150, 3), kernel_regularizer=regularizers.l2(0.001)),
         layers.MaxPooling2D((2, 2)),
         layers.Conv2D(64, (3, 3), activation='relu', kernel_regularizer=regularizers.l2(0.001)),
